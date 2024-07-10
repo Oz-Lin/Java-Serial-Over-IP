@@ -2,6 +2,8 @@ package com.example.serialcomm;
 
 import com.fazecast.jSerialComm.*;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.*;
 
 public class SerialCommApp {
@@ -10,10 +12,11 @@ public class SerialCommApp {
 
     public static void main(String[] args) {
         setupLogger();
+        
         String path = "src/config/config.properties";
-        ConfigurationManager configManager = new ConfigurationManager(path);
+        ConfigurationManager configManager = ConfigurationManager.getInstance(path);
         SerialCommunicator serialCommunicator = new SerialCommunicator();
-        CommandHandler commandHandler = new CommandHandler(serialCommunicator);
+        CommandHandler commandHandler = CommandHandlerFactory.createCommandHandler(serialCommunicator);
 
         if (serialCommunicator.selectPort() != null) {
             serialCommunicator.configurePort(
@@ -46,8 +49,12 @@ public class SerialCommApp {
                     }
                 });
 
-                commandHandler.runCommandInterface();
-                serialCommunicator.closePort();
+                ExecutorService executorService = Executors.newSingleThreadExecutor();
+                executorService.submit(() -> {
+                    commandHandler.runCommandInterface();
+                    serialCommunicator.closePort();
+                });
+                executorService.shutdown();
             }
         }
     }

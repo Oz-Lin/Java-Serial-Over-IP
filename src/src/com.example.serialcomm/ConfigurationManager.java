@@ -7,11 +7,19 @@ import java.util.logging.*;
 
 public class ConfigurationManager {
 
+    private static ConfigurationManager instance;
     private static final Logger logger = Logger.getLogger(ConfigurationManager.class.getName());
     private Properties config;
 
-    public ConfigurationManager(String filePath) {
+    private ConfigurationManager(String filePath) {
         config = loadConfig(filePath);
+    }
+
+    public static ConfigurationManager getInstance(String filePath) {
+        if (instance == null) {
+            instance = new ConfigurationManager(filePath);
+        }
+        return instance;
     }
 
     private Properties loadConfig(String filePath) {
