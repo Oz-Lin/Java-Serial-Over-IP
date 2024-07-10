@@ -1,0 +1,42 @@
+package com.example.serialcomm;
+
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.Properties;
+import java.util.logging.*;
+
+public class ConfigurationManager {
+
+    private static final Logger logger = Logger.getLogger(ConfigurationManager.class.getName());
+    private Properties config;
+
+    public ConfigurationManager(String filePath) {
+        config = loadConfig(filePath);
+    }
+
+    private Properties loadConfig(String filePath) {
+        Properties config = new Properties();
+        try (InputStream input = new FileInputStream(filePath)) {
+            config.load(input);
+        } catch (Exception ex) {
+            logger.severe("Error loading configuration: " + ex.getMessage());
+        }
+        return config;
+    }
+
+    public int getBaudRate() {
+        return Integer.parseInt(config.getProperty("baudRate", "9600"));
+    }
+
+    public int getDataBits() {
+        return Integer.parseInt(config.getProperty("dataBits", "8"));
+    }
+
+    public int getStopBits() {
+        return Integer.parseInt(config.getProperty("stopBits", "1"));
+    }
+
+    public int getParity() {
+        return Integer.parseInt(config.getProperty("parity", "0"));
+    }
+}
