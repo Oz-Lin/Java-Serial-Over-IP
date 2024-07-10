@@ -1,6 +1,7 @@
 package com.example.serialcomm;
 
 import com.fazecast.jSerialComm.*;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.Properties;
 import java.util.Scanner;
@@ -18,25 +19,33 @@ public class SerialCommApp {
     }
 
     public void initialize() {
-        Properties config = loadConfig();
-        int baudRate = Integer.parseInt(config.getProperty("baudRate", "9600"));
-        int dataBits = Integer.parseInt(config.getProperty("dataBits", "8"));
-        int stopBits = Integer.parseInt(config.getProperty("stopBits", "1"));
-        int parity = Integer.parseInt(config.getProperty("parity", "0"));
+        String path = "C:/Users/D7430/Documents/Java-Serial-Over-IP/src/config/config.properties";
+        Properties config = loadConfig(path);
+        if (config.isEmpty()) {
+            logger.severe("Failed to load configuration. Exiting.");
+            return;
+        }
 
-        selectPort();
-        configurePort(baudRate, dataBits, stopBits, parity);
-        openPort();
-        addDataListener();
+        try {
+            int baudRate = Integer.parseInt(config.getProperty("baudRate", "9600"));
+            int dataBits = Integer.parseInt(config.getProperty("dataBits", "8"));
+            int stopBits = Integer.parseInt(config.getProperty("stopBits", "1"));
+            int parity = Integer.parseInt(config.getProperty("parity", "0"));
+
+            selectPort();
+            configurePort(baudRate, dataBits, stopBits, parity);
+            openPort();
+            addDataListener();
+        } catch (NumberFormatException e) {
+            logger.severe("Invalid configuration values: " + e.getMessage());
+        } catch (Exception e) {
+            logger.severe("Unexpected error: " + e.getMessage());
+        }
     }
 
-    private Properties loadConfig() {
+    private Properties loadConfig(String filePath) {
         Properties config = new Properties();
-        try (InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties")) {
-            if (input == null) {
-                logger.severe("Sorry, unable to find config.properties");
-                return config;
-            }
+        try (InputStream input = new FileInputStream(filePath)) {
             config.load(input);
         } catch (Exception ex) {
             logger.severe("Error loading configuration: " + ex.getMessage());
@@ -58,7 +67,13 @@ public class SerialCommApp {
 
         Scanner scanner = new Scanner(System.in);
         System.out.print("Select port (1-" + ports.length + "): ");
-        int portIndex = scanner.nextInt() - 1;
+        int portIndex;
+        try {
+            portIndex = scanner.nextInt() - 1;
+        } catch (Exception e) {
+            logger.severe("Invalid port selection: " + e.getMessage());
+            return;
+        }
 
         if (portIndex < 0 || portIndex >= ports.length) {
             logger.severe("Invalid port selection.");
@@ -69,29 +84,20 @@ public class SerialCommApp {
     }
 
     private void configurePort(int baudRate, int dataBits, int stopBits, int parity) {
-        try {
-            port.setBaudRate(baudRate);
-            port.setNumDataBits(dataBits);
-            port.setNumStopBits(stopBits == 1 ? SerialPort.ONE_STOP_BIT : SerialPort.TWO_STOP_BITS);
-            port.setParity(parity == 0 ? SerialPort.NO_PARITY : (parity == 1 ? SerialPort.ODD_PARITY : SerialPort.EVEN_PARITY));
-        } catch(NullPointerException ex){
-            logger.severe("NullPointerException when reading config file.");
-        }
+        port.setBaudRate(baudRate);
+        port.setNumDataBits(dataBits);
+        port.setNumStopBits(stopBits == 1 ? SerialPort.ONE_STOP_BIT : SerialPort.TWO_STOP_BITS);
+        port.setParity(parity == 0 ? SerialPort.NO_PARITY : (parity == 1 ? SerialPort.ODD_PARITY : SerialPort.EVEN_PARITY));
     }
 
     private void openPort() {
-        try {
-            if (port.openPort()) {
-                logger.info("Port opened successfully.");
-            } else {
-                logger.severe("Failed to open port.");
-            }
-        } catch (NullPointerException ex) {
-            logger.severe("NullPointerException when trying to open port.");
+        if (port.openPort()) {
+            logger.info("Port opened successfully.");
+        } else {
+            logger.severe("Failed to open port.");
         }
     }
 
-        // Adding data listener
     private void addDataListener() {
         port.addDataListener(new SerialPortDataListener() {
             @Override
@@ -143,15 +149,17 @@ public class SerialCommApp {
     }
 
     private void sendCommand(String command) {
-        logger.info("Sending Command: " + command);
-        port.writeBytes(command.getBytes(), command.length());
-        port.writeBytes(new byte[]{'\r', '\n'}, 2); // Send CR and LF
+        try {
+            logger.info("Sending Command: " + command);
+            port.writeBytes(command.getBytes(), command.length());
+            port.writeBytes(new byte[]{'\r', '\n'}, 2); // Send CR and LF
+        } catch (Exception e) {
+            logger.severe("Error sending command: " + e.getMessage());
+        }
     }
 
     private void handleResponse(String response) {
-        // Add logic to parse and handle specific responses from the device
         logger.info("Handling Response: " + response);
-        // Example: if the device sends a specific response, perform some action
         if (response.contains("OK")) {
             logger.info("Device responded with OK.");
         } else {
