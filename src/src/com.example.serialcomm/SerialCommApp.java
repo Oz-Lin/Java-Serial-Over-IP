@@ -1,11 +1,16 @@
 package com.example.serialcomm;
 
 import com.fazecast.jSerialComm.*;
+import java.util.Scanner;
 
 public class SerialCommApp {
+
+    private SerialPort port;
+
     public static void main(String[] args) {
         SerialCommApp app = new SerialCommApp();
         app.initialize();
+        app.runCommandInterface();
     }
 
     public void initialize() {
@@ -16,11 +21,25 @@ public class SerialCommApp {
             return;
         }
 
-        SerialPort port = ports[0]; // Selecting the first available port for simplicity
-        port.setBaudRate(9600); // Set baud rate
-        port.setNumDataBits(8); // Set data bits
-        port.setNumStopBits(SerialPort.ONE_STOP_BIT); // Set stop bits
-        port.setParity(SerialPort.NO_PARITY); // Set parity
+        System.out.println("Available ports:");
+        for (int i = 0; i < ports.length; i++) {
+            System.out.println((i + 1) + ": " + ports[i].getSystemPortName());
+        }
+
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Select port (1-" + ports.length + "): ");
+        int portIndex = scanner.nextInt() - 1;
+
+        if (portIndex < 0 || portIndex >= ports.length) {
+            System.out.println("Invalid port selection.");
+            return;
+        }
+
+        port = ports[portIndex];
+        port.setBaudRate(9600);
+        port.setNumDataBits(8);
+        port.setNumStopBits(SerialPort.ONE_STOP_BIT);
+        port.setParity(SerialPort.NO_PARITY);
 
         if (port.openPort()) {
             System.out.println("Port opened successfully.");
@@ -44,14 +63,38 @@ public class SerialCommApp {
 
                 byte[] newData = new byte[port.bytesAvailable()];
                 int numRead = port.readBytes(newData, newData.length);
-                System.out.println("Read " + numRead + " bytes.");
-                String receivedData = new String(newData);
-                System.out.println("Received Data: " + receivedData);
+                if (numRead > 0) {
+                    String receivedData = new String(newData);
+                    System.out.println("Received Data: " + receivedData);
+                }
             }
         });
+    }
 
-        // Example of writing data to the serial port
-        String dataToSend = "Hello, Serial Port!";
-        port.writeBytes(dataToSend.getBytes(), dataToSend.length());
+    public void runCommandInterface() {
+        if (port == null || !port.isOpen()) {
+            System.out.println("Port is not open.");
+            return;
+        }
+
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Enter commands to send to the device (type 'exit' to quit):");
+
+        while (true) {
+            System.out.print("> ");
+            String command = scanner.nextLine();
+
+            if (command.equalsIgnoreCase("exit")) {
+                break;
+            }
+
+            if (!command.trim().isEmpty()) {
+                port.writeBytes(command.getBytes(), command.length());
+                port.writeBytes(new byte[]{'\r', '\n'}, 2); // Send CR and LF
+            }
+        }
+
+        port.closePort();
+        System.out.println("Port closed.");
     }
 }
