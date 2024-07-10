@@ -1,6 +1,8 @@
 package com.example.serialcomm;
 
 import com.fazecast.jSerialComm.*;
+import java.io.InputStream;
+import java.util.Properties;
 import java.util.Scanner;
 import java.util.logging.*;
 
@@ -16,11 +18,36 @@ public class SerialCommApp {
     }
 
     public void initialize() {
-        // Find and open the serial port
+        Properties config = loadConfig();
+        int baudRate = Integer.parseInt(config.getProperty("baudRate", "9600"));
+        int dataBits = Integer.parseInt(config.getProperty("dataBits", "8"));
+        int stopBits = Integer.parseInt(config.getProperty("stopBits", "1"));
+        int parity = Integer.parseInt(config.getProperty("parity", "0"));
+
+        selectPort();
+        configurePort(baudRate, dataBits, stopBits, parity);
+        openPort();
+        addDataListener();
+    }
+
+    private Properties loadConfig() {
+        Properties config = new Properties();
+        try (InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties")) {
+            if (input == null) {
+                logger.severe("Sorry, unable to find config.properties");
+                return config;
+            }
+            config.load(input);
+        } catch (Exception ex) {
+            logger.severe("Error loading configuration: " + ex.getMessage());
+        }
+        return config;
+    }
+
+    private void selectPort() {
         SerialPort[] ports = SerialPort.getCommPorts();
         if (ports.length == 0) {
             logger.severe("No serial ports available.");
-            //System.out.println("No serial ports available.");
             return;
         }
 
@@ -35,24 +62,37 @@ public class SerialCommApp {
 
         if (portIndex < 0 || portIndex >= ports.length) {
             logger.severe("Invalid port selection.");
-//            System.out.println("Invalid port selection.");
             return;
         }
 
         port = ports[portIndex];
-        port.setBaudRate(9600);
-        port.setNumDataBits(8);
-        port.setNumStopBits(SerialPort.ONE_STOP_BIT);
-        port.setParity(SerialPort.NO_PARITY);
+    }
 
-        if (port.openPort()) {
-            System.out.println("Port opened successfully.");
-        } else {
-            System.out.println("Failed to open port.");
-            return;
+    private void configurePort(int baudRate, int dataBits, int stopBits, int parity) {
+        try {
+            port.setBaudRate(baudRate);
+            port.setNumDataBits(dataBits);
+            port.setNumStopBits(stopBits == 1 ? SerialPort.ONE_STOP_BIT : SerialPort.TWO_STOP_BITS);
+            port.setParity(parity == 0 ? SerialPort.NO_PARITY : (parity == 1 ? SerialPort.ODD_PARITY : SerialPort.EVEN_PARITY));
+        } catch(NullPointerException ex){
+            logger.severe("NullPointerException when reading config file.");
         }
+    }
+
+    private void openPort() {
+        try {
+            if (port.openPort()) {
+                logger.info("Port opened successfully.");
+            } else {
+                logger.severe("Failed to open port.");
+            }
+        } catch (NullPointerException ex) {
+            logger.severe("NullPointerException when trying to open port.");
+        }
+    }
 
         // Adding data listener
+    private void addDataListener() {
         port.addDataListener(new SerialPortDataListener() {
             @Override
             public int getListeningEvents() {
@@ -69,10 +109,8 @@ public class SerialCommApp {
                 int numRead = port.readBytes(newData, newData.length);
                 if (numRead > 0) {
                     String receivedData = new String(newData);
-//                    System.out.println("Received Data: " + receivedData);
                     logger.info("Received Data: " + receivedData);
                     handleResponse(receivedData);
-
                 }
             }
         });
@@ -81,7 +119,6 @@ public class SerialCommApp {
     public void runCommandInterface() {
         if (port == null || !port.isOpen()) {
             logger.severe("Port is not open.");
-            //            System.out.println("Port is not open.");
             return;
         }
 
@@ -103,8 +140,8 @@ public class SerialCommApp {
 
         port.closePort();
         logger.info("Port closed.");
-//        System.out.println("Port closed.");
     }
+
     private void sendCommand(String command) {
         logger.info("Sending Command: " + command);
         port.writeBytes(command.getBytes(), command.length());
