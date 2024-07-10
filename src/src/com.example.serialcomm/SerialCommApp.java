@@ -157,7 +157,16 @@ public class SerialCommApp {
             }
 
             if (!command.trim().isEmpty()) {
-                sendCommand(command);
+                switch (command.toLowerCase()) {
+                    case "read_config":
+                        readConfig();
+                        break;
+                    case "reset":
+                        resetDevice();
+                        break;
+                    default:
+                        sendCommand(command);
+                }
             }
         }
 
@@ -182,5 +191,18 @@ public class SerialCommApp {
         } else {
             logger.warning("Unhandled response: " + response);
         }
+    }
+
+    // Additional methods for common commands
+    public void readConfig() {
+        sendCommand("READ_CONFIG");
+    }
+
+    public void writeConfig(String configData) {
+        sendCommand("WRITE_CONFIG " + configData);
+    }
+
+    public void resetDevice() {
+        sendCommand("RESET");
     }
 }
