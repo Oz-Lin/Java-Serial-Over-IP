@@ -13,13 +13,30 @@ public class SerialCommApp {
     private static final Logger logger = Logger.getLogger(SerialCommApp.class.getName());
 
     public static void main(String[] args) {
+        setupLogger();
         SerialCommApp app = new SerialCommApp();
         app.initialize();
         app.runCommandInterface();
     }
 
+    private static void setupLogger() {
+        try {
+            LogManager.getLogManager().reset();
+            ConsoleHandler consoleHandler = new ConsoleHandler();
+            consoleHandler.setLevel(Level.ALL);
+            logger.addHandler(consoleHandler);
+
+            FileHandler fileHandler = new FileHandler("serial_comm.log", true);
+            fileHandler.setLevel(Level.ALL);
+            fileHandler.setFormatter(new SimpleFormatter());
+            logger.addHandler(fileHandler);
+        } catch (Exception e) {
+            System.err.println("Failed to setup logger: " + e.getMessage());
+        }
+    }
+
     public void initialize() {
-        String path = "C:/Users/D7430/Documents/Java-Serial-Over-IP/src/config/config.properties";
+        String path = "src/config/config.properties";
         Properties config = loadConfig(path);
         if (config.isEmpty()) {
             logger.severe("Failed to load configuration. Exiting.");
