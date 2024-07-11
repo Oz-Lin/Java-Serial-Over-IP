@@ -1,15 +1,30 @@
 package com.example.serialcomm;
+import com.example.serialcomm.commands.*;
 
+//import com.example.serialcomm.commands.Command;
+//import com.example.serialcomm.commands.ReadConfigCommand;
+//import com.example.serialcomm.commands.ResetDeviceCommand;
+//import com.example.serialcomm.commands.SendCustomCommand;
+
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.logging.*;
 
 public class CommandHandler {
-
     private static final Logger logger = Logger.getLogger(CommandHandler.class.getName());
     private SerialCommunicator serialCommunicator;
+    private Map<String, Command> commandMap;
 
     public CommandHandler(SerialCommunicator serialCommunicator) {
         this.serialCommunicator = serialCommunicator;
+        this.commandMap = new HashMap<>();
+        initializeCommands();
+    }
+
+    private void initializeCommands() {
+        commandMap.put("read_config", new ReadConfigCommand(serialCommunicator));
+        commandMap.put("reset", new ResetDeviceCommand(serialCommunicator));
     }
 
     public void runCommandInterface() {
@@ -18,42 +33,19 @@ public class CommandHandler {
 
         while (true) {
             System.out.print("> ");
-            String command = scanner.nextLine();
+            String commandKey = scanner.nextLine().toLowerCase();
 
-            if (command.equalsIgnoreCase("exit")) {
+            if (commandKey.equalsIgnoreCase("exit")) {
                 break;
             }
 
-            if (!command.trim().isEmpty()) {
-                switch (command.toLowerCase()) {
-                    case "read_config":
-                        readConfig();
-                        break;
-                    case "reset":
-                        resetDevice();
-                        break;
-                    default:
-                        sendCommand(command);
-                }
+            Command command = commandMap.get(commandKey);
+            if (command != null) {
+                command.execute();
+            } else {
+                new SendCustomCommand(serialCommunicator, commandKey).execute();
             }
         }
-    }
-
-    private void sendCommand(String command) {
-        try {
-            logger.info("Sending Command: " + command);
-            serialCommunicator.writeData(command);
-        } catch (Exception e) {
-            logger.severe("Error sending command: " + e.getMessage());
-        }
-    }
-
-    private void readConfig() {
-        sendCommand("READ_CONFIG");
-    }
-
-    private void resetDevice() {
-        sendCommand("RESET");
     }
 
     public void handleResponse(String response) {

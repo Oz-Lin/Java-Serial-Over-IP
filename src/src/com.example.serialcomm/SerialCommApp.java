@@ -42,7 +42,8 @@ public class SerialCommApp {
                         byte[] newData = new byte[serialCommunicator.getPort().bytesAvailable()];
                         int numRead = serialCommunicator.getPort().readBytes(newData, newData.length);
                         if (numRead > 0) {
-                            String receivedData = new String(newData);
+                            serialCommunicator.bufferData(newData);
+                            String receivedData = serialCommunicator.readBufferedData();
                             logger.info("Received Data: " + receivedData);
                             commandHandler.handleResponse(receivedData);
                         }

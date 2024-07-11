@@ -7,6 +7,7 @@ public class SerialCommunicator {
 
     private SerialPort port;
     private static final Logger logger = Logger.getLogger(SerialCommunicator.class.getName());
+    private StringBuilder dataBuffer = new StringBuilder();
 
     public SerialPort selectPort() {
         SerialPort[] ports = SerialPort.getCommPorts();
@@ -63,5 +64,19 @@ public class SerialCommunicator {
             port.writeBytes(data.getBytes(), data.length());
             port.writeBytes(new byte[]{'\r', '\n'}, 2); // Send CR and LF
         }
+    }
+
+    public void bufferData(byte[] data) {
+        dataBuffer.append(new String(data));
+    }
+
+    public String readBufferedData() {
+        String data = dataBuffer.toString();
+        dataBuffer.setLength(0); // Clear the buffer
+        return data;
+    }
+
+    public SerialPort getPort() {
+        return port;
     }
 }
