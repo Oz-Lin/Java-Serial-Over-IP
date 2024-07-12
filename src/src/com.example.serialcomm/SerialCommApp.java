@@ -20,7 +20,8 @@ public class SerialCommApp {
 
         if (serialCommunicator.selectPort() == null) {
             logger.severe("No available serial ports. Exiting application.");
-            return;
+            System.exit(1); // Exit the application with a status code of 1 indicating an error
+            //return;
         }
 
         serialCommunicator.configurePort(
@@ -32,7 +33,8 @@ public class SerialCommApp {
 
         if (!serialCommunicator.openPort()) {
             logger.severe("Failed to open serial port. Exiting application.");
-            return;
+            System.exit(1); // Exit the application with a status code of 1 indicating an error
+            //return;
         }
 
         serialCommunicator.addDataListener(new SerialPortDataListener() {
