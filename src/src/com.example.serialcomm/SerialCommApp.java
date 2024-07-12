@@ -18,46 +18,52 @@ public class SerialCommApp {
         SerialCommunicator serialCommunicator = new SerialCommunicator();
         CommandHandler commandHandler = CommandHandlerFactory.createCommandHandler(serialCommunicator);
 
-        if (serialCommunicator.selectPort() != null) {
-            serialCommunicator.configurePort(
-                    configManager.getBaudRate(),
-                    configManager.getDataBits(),
-                    configManager.getStopBits(),
-                    configManager.getParity()
-            );
-
-            if (serialCommunicator.openPort()) {
-                serialCommunicator.addDataListener(new SerialPortDataListener() {
-                    @Override
-                    public int getListeningEvents() {
-                        return SerialPort.LISTENING_EVENT_DATA_AVAILABLE;
-                    }
-
-                    @Override
-                    public void serialEvent(SerialPortEvent event) {
-                        if (event.getEventType() != SerialPort.LISTENING_EVENT_DATA_AVAILABLE) {
-                            return;
-                        }
-
-                        byte[] newData = new byte[serialCommunicator.getPort().bytesAvailable()];
-                        int numRead = serialCommunicator.getPort().readBytes(newData, newData.length);
-                        if (numRead > 0) {
-                            serialCommunicator.bufferData(newData);
-                            String receivedData = serialCommunicator.readBufferedData();
-                            logger.info("Received Data: " + receivedData);
-                            commandHandler.handleResponse(receivedData);
-                        }
-                    }
-                });
-
-                ExecutorService executorService = Executors.newSingleThreadExecutor();
-                executorService.submit(() -> {
-                    commandHandler.runCommandInterface();
-                    serialCommunicator.closePort();
-                });
-                executorService.shutdown();
-            }
+        if (serialCommunicator.selectPort() == null) {
+            logger.severe("No available serial ports. Exiting application.");
+            return;
         }
+
+        serialCommunicator.configurePort(
+                configManager.getBaudRate(),
+                configManager.getDataBits(),
+                configManager.getStopBits(),
+                configManager.getParity()
+        );
+
+        if (!serialCommunicator.openPort()) {
+            logger.severe("Failed to open serial port. Exiting application.");
+            return;
+        }
+
+        serialCommunicator.addDataListener(new SerialPortDataListener() {
+            @Override
+            public int getListeningEvents() {
+                return SerialPort.LISTENING_EVENT_DATA_AVAILABLE;
+            }
+
+            @Override
+            public void serialEvent(SerialPortEvent event) {
+                if (event.getEventType() != SerialPort.LISTENING_EVENT_DATA_AVAILABLE) {
+                    return;
+                }
+
+                byte[] newData = new byte[serialCommunicator.getPort().bytesAvailable()];
+                int numRead = serialCommunicator.getPort().readBytes(newData, newData.length);
+                if (numRead > 0) {
+                    serialCommunicator.bufferData(newData);
+                    String receivedData = serialCommunicator.readBufferedData();
+                    logger.info("Received Data: " + receivedData);
+                    commandHandler.handleResponse(receivedData);
+                }
+            }
+        });
+
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        executorService.submit(() -> {
+            commandHandler.runCommandInterface();
+            serialCommunicator.closePort();
+        });
+        executorService.shutdown();
     }
 
     private static void setupLogger() {

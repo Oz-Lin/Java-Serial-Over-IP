@@ -22,7 +22,7 @@ public class SerialCommunicator {
             System.out.println((i + 1) + ": " + ports[i].getSystemPortName());
         }
 
-        port = ports[0];
+        port = ports[0]; // Select the first port for simplicity
         return port;
     }
 
