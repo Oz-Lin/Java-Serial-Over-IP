@@ -15,7 +15,8 @@ This Java application provides serial communication over an IP network to contro
 1. **Install Dependencies:**
     - Ensure you have the RXTX library (com.fazecast.jSerialComm) installed and configured.
     Download from https://mvnrepository.com/artifact/com.fazecast/jSerialComm/2.11.0
-
+    - Otherwise, the .jar library is included in https://github.com/Oz-Lin/Java-Serial-Over-IP/blob/main/src/lib/jSerialComm-2.11.0.jar 
+   where you can manually load and import in your Java IDEs.
 2. **Configuration:**
     - Create a `config.properties` file in the specified relative path (`"src/config/config.properties"`) with the following content:
       ```properties
