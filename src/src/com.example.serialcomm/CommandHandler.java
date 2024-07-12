@@ -1,25 +1,29 @@
 package com.example.serialcomm;
-import com.example.serialcomm.commands.*;
 
-//import com.example.serialcomm.commands.Command;
-//import com.example.serialcomm.commands.ReadConfigCommand;
-//import com.example.serialcomm.commands.ResetDeviceCommand;
-//import com.example.serialcomm.commands.SendCustomCommand;
+import com.example.serialcomm.commands.*;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.*;
 
 public class CommandHandler {
+
     private static final Logger logger = Logger.getLogger(CommandHandler.class.getName());
-    private SerialCommunicator serialCommunicator;
-    private Map<String, Command> commandMap;
+    private final SerialCommunicator serialCommunicator;
+    private final Map<String, Command> commandMap;
+    private final CommandQueue commandQueue;
+    private final ExecutorService executorService;
 
     public CommandHandler(SerialCommunicator serialCommunicator) {
         this.serialCommunicator = serialCommunicator;
         this.commandMap = new HashMap<>();
+        this.commandQueue = new CommandQueue();
+        this.executorService = Executors.newSingleThreadExecutor();
         initializeCommands();
+        startCommandExecution();
     }
 
     private void initializeCommands() {
@@ -41,11 +45,24 @@ public class CommandHandler {
 
             Command command = commandMap.get(commandKey);
             if (command != null) {
-                command.execute();
+                commandQueue.addCommand(command);
             } else {
-                new SendCustomCommand(serialCommunicator, commandKey).execute();
+                commandQueue.addCommand(new SendCustomCommand(serialCommunicator, commandKey));
             }
         }
+
+        executorService.shutdown();
+    }
+
+    private void startCommandExecution() {
+        executorService.submit(() -> {
+            while (!executorService.isShutdown()) {
+                Command command = commandQueue.takeCommand();
+                if (command != null) {
+                    command.execute();
+                }
+            }
+        });
     }
 
     public void handleResponse(String response) {

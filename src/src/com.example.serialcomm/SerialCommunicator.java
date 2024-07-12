@@ -7,7 +7,8 @@ public class SerialCommunicator {
 
     private SerialPort port;
     private static final Logger logger = Logger.getLogger(SerialCommunicator.class.getName());
-    private StringBuilder dataBuffer = new StringBuilder();
+    private final StringBuilder dataBuffer = new StringBuilder();
+    private static final int MAX_RETRIES = 3;
 
     public SerialPort selectPort() {
         SerialPort[] ports = SerialPort.getCommPorts();
@@ -21,8 +22,6 @@ public class SerialCommunicator {
             System.out.println((i + 1) + ": " + ports[i].getSystemPortName());
         }
 
-        // This is a simplified way to select the first available port for demonstration
-        // Ideally, implement user input to select the port
         port = ports[0];
         return port;
     }
@@ -60,9 +59,22 @@ public class SerialCommunicator {
     }
 
     public void writeData(String data) {
-        if (port != null) {
-            port.writeBytes(data.getBytes(), data.length());
-            port.writeBytes(new byte[]{'\r', '\n'}, 2); // Send CR and LF
+        int attempt = 0;
+        boolean success = false;
+        while (attempt < MAX_RETRIES && !success) {
+            try {
+                if (port != null) {
+                    port.writeBytes(data.getBytes(), data.length());
+                    port.writeBytes(new byte[]{'\r', '\n'}, 2); // Send CR and LF
+                    success = true;
+                }
+            } catch (Exception e) {
+                attempt++;
+                logger.severe("Error sending data (attempt " + attempt + "): " + e.getMessage());
+                if (attempt >= MAX_RETRIES) {
+                    logger.severe("Failed to send data after " + MAX_RETRIES + " attempts.");
+                }
+            }
         }
     }
 
