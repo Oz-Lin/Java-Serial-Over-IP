@@ -10,8 +10,10 @@ public class ConfigurationManager {
     private static ConfigurationManager instance;
     private static final Logger logger = Logger.getLogger(ConfigurationManager.class.getName());
     private Properties config;
+    private String configFilePath;
 
     private ConfigurationManager(String filePath) {
+        this.configFilePath = filePath;
         config = loadConfig(filePath);
     }
 
@@ -30,6 +32,11 @@ public class ConfigurationManager {
             logger.severe("Error loading configuration: " + ex.getMessage());
         }
         return config;
+    }
+
+    public void reloadConfig() {
+        config = loadConfig(configFilePath);
+        logger.info("Configuration reloaded.");
     }
 
     public int getBaudRate() {

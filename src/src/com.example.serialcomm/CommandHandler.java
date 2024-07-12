@@ -43,11 +43,17 @@ public class CommandHandler {
                 break;
             }
 
-            Command command = commandMap.get(commandKey);
+            String[] commandParts = commandKey.split(" ", 2);
+            Command command = commandMap.get(commandParts[0]);
             if (command != null) {
                 commandQueue.addCommand(command);
+                System.out.println("Command '" + commandParts[0] + "' added to the queue.");
+            } else if (commandParts[0].equals("write_config") && commandParts.length > 1) {
+                commandQueue.addCommand(new WriteConfigCommand(serialCommunicator, commandParts[1]));
+                System.out.println("Write configuration command added to the queue.");
             } else {
                 commandQueue.addCommand(new SendCustomCommand(serialCommunicator, commandKey));
+                System.out.println("Custom command '" + commandKey + "' added to the queue.");
             }
         }
 
